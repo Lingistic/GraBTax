@@ -1,0 +1,8 @@
+MANIFEST.in
+README.rst
+metis.py
+setup.py
+metis.egg-info/PKG-INFO
+metis.egg-info/SOURCES.txt
+metis.egg-info/dependency_links.txt
+metis.egg-info/top_level.txt
