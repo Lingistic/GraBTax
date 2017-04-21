@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
 project(METIS)
 
-set(GKLIB_PATH "GKlib" CACHE PATH "path to GKlib")
+# Fix GKlib path:
+if(NOT WIN32)
+	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
+else()
+    set(GKLIB_PATH "GKlib" CACHE PATH "path to GKlib")
+endif()--
+
 set(SHARED FALSE CACHE BOOL "build a shared library")
 
 if(MSVC)
@@ -25,3 +31,5 @@ include_directories(include)
 add_subdirectory("include")
 add_subdirectory("libmetis")
 add_subdirectory("programs")
+
+
