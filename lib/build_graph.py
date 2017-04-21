@@ -7,7 +7,13 @@ processes a document topic matrix and determines the strength of a topic as a fu
 the corpus, beyond a threshold
 """
 
-def jaccard_similarity
+
+def jaccard_similarity(doc_topic_matrix):
+    """
+    given a document topic matrix, calculate the jaccard similarity score (intersection over union) between each topic
+    :param doc_topic_matrix:
+    :return:
+    """
 
 
 def add_vertices(doc_topic_matrix, g, threshold=.05):
