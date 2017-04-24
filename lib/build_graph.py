@@ -1,5 +1,5 @@
 import numpy
-from networkx import Graph
+from networkx import Graph, write_graphml
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -81,7 +81,7 @@ def add_vertices(cooccurrence_matrix, g):
         logging.debug(i)
         topic_i = cooccurrence_matrix[:, i]
         sum_i = numpy.nansum(topic_i)
-        g.add_node(i, weight=sum_i)
+        g.add_node(i, weight=int(sum_i))
     return g
 
 
@@ -100,7 +100,7 @@ def add_weights(sims_matrix, cooccurrence_matrix, g):
             count = cooccurrence_matrix[i, j]
             jac = sims_matrix[i, j]
             weight_ij = (1 + (lambda1 * rank) + (lambda2 * jac)) * count
-            g.add_edge(i, j, weight = weight_ij)
+            g.add_edge(i, j, weight=float(weight_ij))
     return g
 
 
@@ -149,6 +149,6 @@ if __name__ == "__main__":
     g = Graph()
     g = add_vertices(cooccurrences, g)
     g = add_weights(sims, cooccurrences, g)
-    print(g)
+    write_graphml(g, "wiki_topics.gml")
 
 
