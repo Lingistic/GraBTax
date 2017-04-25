@@ -1,6 +1,7 @@
 import numpy
-from networkx import Graph, write_graphml
+from networkx import Graph, write_graphml, read_graphml
 import logging
+import pickle
 logging.basicConfig(level=logging.DEBUG)
 
 """
@@ -123,13 +124,14 @@ def get_rank(i, j, cooccurrence_matrix):
         i_given_j = get_conditional_topic_prob(i, j, cooccurrence_matrix)
         if h_given_j > i_given_j:
             rank_count += 1
-            break
 
     rank = rank_count + 1
     return rank
 
 
 def get_conditional_topic_prob(i, j, cooccurrence_matrix):
+    if i == j:
+        return 1.0
     topic_j = cooccurrence_matrix[:, j]
     sum_j = numpy.nansum(topic_j)
     count_i_given_j = numpy.nansum(cooccurrence_matrix[i,j])
@@ -139,16 +141,42 @@ def get_conditional_topic_prob(i, j, cooccurrence_matrix):
     return count_i_given_j / sum_j
 
 
+def save(name, g, cooccurrences, sims, b):
+    write_graphml(g, name + ".graphml")
+    with open(name + "_cooccurrences", "wb+") as f:
+        pickle.dump(cooccurrences, f)
+    with open(name + "_sims", "wb+") as f:
+        pickle.dump(sims, f)
+    with open(name + "_bools", "wb+") as f:
+        pickle.dump(b, f)
+
+
+def load(name):
+    g = read_graphml(name + ".graphml")
+    with open(name + "_cooccurrences", "rb") as f:
+        cooccurrences = pickle.load(f)
+    with open(name + "_sims", "rb") as f:
+        sims = pickle.load(f)
+    with open(name + "_bools", "rb") as f:
+        bools = pickle.load(f)
+
+    return (g, cooccurrences, sims, bools)
+
+
 if __name__ == "__main__":
-    import pickle
+    from lib.subgraph import get_subgraph
     with open("theta.pkl", "rb") as f:
         foo = pickle.load(f)
-    b = make_boolean_topic_matrix(foo)
-    sims = jaccard_similarity(b)
-    cooccurrences = calculate_cooccurences(b)
-    g = Graph()
-    g = add_vertices(cooccurrences, g)
-    g = add_weights(sims, cooccurrences, g)
-    write_graphml(g, "wiki_topics.gml")
+    #b = make_boolean_topic_matrix(foo)
+    #sims = jaccard_similarity(b)
+    #cooccurrences = calculate_cooccurences(b)
+    #g = Graph()
+    #g = add_vertices(cooccurrences, g)
+    #g = add_weights(sims, cooccurrences, g)
+    #save("wiki_topics", g, cooccurrences, sims, b)
+    #g = read_graphml("wiki_topics.gml")
+    (g, cooccurrences, sims, b) = load("wiki_topics")
+    g_sub = get_subgraph(g, 0, cooccurrences)
+    write_graphml(g_sub, "topic_0_subgraph.gml")
 
 
