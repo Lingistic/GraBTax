@@ -22,7 +22,7 @@ def make_boolean_topic_matrix(doc_topic_matrix, threshold=0.05):
     return m
 
 
-def jaccard_similarity(bool_topic_matrix):
+def jaccard_similarity(g, bool_topic_matrix):
     """
     given a document topic matrix, calculate the jaccard similarity score (intersection over union) between each topic
     :param bool_topic_matrix: a boolean matrix of n documents X m topics with TRUE if the topic is represented
@@ -43,7 +43,12 @@ def jaccard_similarity(bool_topic_matrix):
                 jaccard = intersection.sum() / float(union.sum())
                 jaccard_matrix[i, j] = jaccard
                 jaccard_matrix[j, i] = jaccard
-    return jaccard_matrix
+                try:
+                    if "count" in g.edge[i][j].keys():
+                        g.add_edge(i, j, similarity=int(jaccard*100))
+                except KeyError:
+                    pass
+    return g
 
 
 def calculate_cooccurences(bool_topic_matrix):
@@ -68,7 +73,7 @@ def calculate_cooccurences(bool_topic_matrix):
     return cooccurrence_matrix
 
 
-def add_vertices(cooccurrence_matrix, g):
+def add_vertices(cooccurrence_matrix, g, topic_words):
     """
 
     :param cooccurrence_matrix:
@@ -82,46 +87,52 @@ def add_vertices(cooccurrence_matrix, g):
         logging.debug(i)
         topic_i = cooccurrence_matrix[:, i]
         sum_i = numpy.nansum(topic_i)
-        g.add_node(i, weight=int(sum_i))
+        g.add_node(i, weight=int(sum_i), words=topic_words[i])
+        colocations = numpy.where(topic_i > 0)[0]
+        for j in colocations:
+            g.add_edge(i, j, count=int(numpy.nansum(cooccurrence_matrix[i,j])))
     return g
 
 
-def add_weights(sims_matrix, cooccurrence_matrix, g):
+def add_edge_weights(g):
     logging.info("Adding weights to edges in graph")
-    num_topics = cooccurrence_matrix.shape[1]
+    num_topics = len(g)
     logging.debug(num_topics)
     for i in range(num_topics):
         logging.debug(i)
-        topic_i = cooccurrence_matrix[:, i]
-        colocations = numpy.where(topic_i > 0)[0]
+        topic_i = g.node[i]["weight"]
+        colocations = [key for key in g.edge[i].keys()]
         lambda1 = 1
         lambda2 = 1
         for j in colocations:
-            rank = 1 if get_rank(i, j, cooccurrence_matrix) == 1 or get_rank(j, i, cooccurrence_matrix) == 1 else 0
-            count = cooccurrence_matrix[i, j]
-            jac = sims_matrix[i, j]
+            rank_ij = get_rank(i, j, g)
+            rank_ji = get_rank(j, i, g)
+            rank = 1 if rank_ij == 1 or rank_ji == 1 else 0
+            count = g.edge[i][j]["count"]
+            jac = g.edge[i][j]["similarity"]
             weight_ij = (1 + (lambda1 * rank) + (lambda2 * jac)) * count
-            g.add_edge(i, j, weight=float(weight_ij))
+            g.add_edge(i, j, weight=int(weight_ij))
     return g
 
 
-def get_rank(i, j, cooccurrence_matrix):
+def get_rank(i, j, g):
     rank_count = 0
     # first get topics with greater strength than topic j
-    topic_j = cooccurrence_matrix[:, j]
-    sum_j = numpy.nansum(topic_j)
+    topic_j_s = g.node[j]["weight"]
+
     candidate_h = []
-    num_topics = cooccurrence_matrix.shape[1]
+    num_topics = len(g)
     for h in range(num_topics):
-        if j != h and i != h:
-            topic_h = cooccurrence_matrix[:, h]
-            sum_h = numpy.nansum(topic_h)
-            if sum_h > sum_j:
-                candidate_h.append(h)
+        topic_h = g.nodes()[h]
+        if j != topic_h and i != topic_h:
+            topic_h_s = g.node[topic_h]["weight"]
+
+            if topic_h_s > topic_j_s:
+                candidate_h.append(topic_h)
 
     for h in candidate_h:
-        h_given_j = get_conditional_topic_prob(h, j, cooccurrence_matrix)
-        i_given_j = get_conditional_topic_prob(i, j, cooccurrence_matrix)
+        h_given_j = get_conditional_topic_prob(h, j, g)
+        i_given_j = get_conditional_topic_prob(i, j, g)
         if h_given_j > i_given_j:
             rank_count += 1
 
@@ -129,54 +140,99 @@ def get_rank(i, j, cooccurrence_matrix):
     return rank
 
 
-def get_conditional_topic_prob(i, j, cooccurrence_matrix):
+def get_conditional_topic_prob(i, j, g):
     if i == j:
         return 1.0
-    topic_j = cooccurrence_matrix[:, j]
-    sum_j = numpy.nansum(topic_j)
-    count_i_given_j = numpy.nansum(cooccurrence_matrix[i,j])
-    if sum_j == 0:
+    topic_j_s = g.node[j]["weight"]
+    try:
+        count_i_given_j = g.edge[i][j]["count"]
+    except KeyError:
+        return 0.0
+    if topic_j_s == 0:
         return 0.0
 
-    return count_i_given_j / sum_j
+    return count_i_given_j / topic_j_s
 
 
-def save(name, g, cooccurrences, sims, b):
-    write_graphml(g, name + ".graphml")
-    with open(name + "_cooccurrences", "wb+") as f:
-        pickle.dump(cooccurrences, f)
-    with open(name + "_sims", "wb+") as f:
-        pickle.dump(sims, f)
-    with open(name + "_bools", "wb+") as f:
-        pickle.dump(b, f)
+def save(name, g):
+    write_graphml(g, "graphs//" + name + ".graphml")
 
 
 def load(name):
-    g = read_graphml(name + ".graphml")
-    with open(name + "_cooccurrences", "rb") as f:
-        cooccurrences = pickle.load(f)
-    with open(name + "_sims", "rb") as f:
-        sims = pickle.load(f)
-    with open(name + "_bools", "rb") as f:
-        bools = pickle.load(f)
-
-    return (g, cooccurrences, sims, bools)
+    g = read_graphml("graphs//" + name + ".graphml", node_type=int)
+    return g
 
 
 if __name__ == "__main__":
     from lib.subgraph import get_subgraph
-    with open("theta.pkl", "rb") as f:
-        foo = pickle.load(f)
-    #b = make_boolean_topic_matrix(foo)
-    #sims = jaccard_similarity(b)
-    #cooccurrences = calculate_cooccurences(b)
-    #g = Graph()
-    #g = add_vertices(cooccurrences, g)
-    #g = add_weights(sims, cooccurrences, g)
-    #save("wiki_topics", g, cooccurrences, sims, b)
-    #g = read_graphml("wiki_topics.gml")
-    (g, cooccurrences, sims, b) = load("wiki_topics")
-    g_sub = get_subgraph(g, 0, cooccurrences)
-    write_graphml(g_sub, "topic_0_subgraph.gml")
+    import csv
+    import metis
+    import networkx
 
+    with open("topic_words.tsv", "r") as infile:
+        reader = csv.reader(infile, delimiter="\t")
+        topic_words = {int(rows[0]): rows[1] for rows in reader}
+    if False:
+        with open("theta.pkl", "rb") as f:
+            foo = pickle.load(f)
+        b = make_boolean_topic_matrix(foo)
+        cooccurrences = calculate_cooccurences(b)
+        g = Graph()
+        g = add_vertices(cooccurrences, g, topic_words)
+        g = jaccard_similarity(g, b)
+        g = add_edge_weights(g)
+        g.graph["edge_weight_attr"] = "weight"
+        g.graph["node_weight_attr"] = "weight"
+        save("wiki_topics", g)
+    else:
+        g = load("wiki_topics")
+    g.remove_node(179) #outlier
+    g.remove_node(245)
+    g.remove_node(47)
+    g.remove_node(106)
+    g.remove_node(13)
+    g.remove_node(24)
+    g.remove_node(230)
+    g.remove_node(59)
+    g.remove_node(183)
+    taxonomy = Graph()
 
+    def recursive_partition(g, taxonomy, query_topic, k = 4):
+        taxonomy.add_node(query_topic, weight=g.node[query_topic]["weight"])
+        g_sub = get_subgraph(g, query_topic)
+        g_part = None
+        if len(g_sub) > 1:
+            x = metis.networkx_to_metis(g_sub)
+            (edgecuts, parts) = metis.part_graph(x, k)
+
+            for part in range(k):
+                max_degree = 0
+                max_node = None
+                for node in [g_sub.nodes()[i] for i, j in enumerate(parts) if j == part]:
+                    degree = g_sub.degree(node)
+                    if degree > max_degree:
+                        max_node = node
+                        max_degree = degree
+                if max_node != None:
+                    g_part, head = recursive_partition(
+                        g_sub.subgraph([g_sub.nodes()[i] for i, j in enumerate(parts) if j == part]), taxonomy, max_node)
+                    taxonomy.add_node(max_node, weight=g_sub.node[max_node]["weight"])
+                    taxonomy.add_edge(query_topic, max_node)
+
+        #else:
+            #g_part = g
+            #for node in g_part.nodes():
+            #    if node != query_topic:
+            #        taxonomy.add_edge(query_topic, node)
+
+        return taxonomy, query_topic
+
+    taxonomy = recursive_partition(g, taxonomy, 43)
+    for node in taxonomy[0].nodes():
+        taxonomy[0].node[node]["label"] = topic_words[node]
+
+    taxonomy = recursive_partition(g, taxonomy[0], 84)
+    for node in taxonomy[0].nodes():
+        taxonomy[0].node[node]["label"] = topic_words[node]
+
+    save("84_taxonomy", taxonomy[0])
