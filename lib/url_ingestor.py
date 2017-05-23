@@ -2,7 +2,7 @@ from lib.base_ingestor import BaseIngestor
 from contextlib import contextmanager
 
 
-class TestIngestor(BaseIngestor):
+class UrlIngestor(BaseIngestor):
     __connected = False
 
     def __init__(self):

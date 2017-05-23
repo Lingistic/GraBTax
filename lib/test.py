@@ -1,11 +1,16 @@
 from lib.build_graph import build_graph, load, recursive_partition, save
-from lib.test_ingestor import TestIngestor
+from lib.url_ingestor import UrlIngestor
 import csv
 import pickle
 import networkx
 
 if __name__ == "__main__":
-    ingestor = TestIngestor()
+
+    # train model
+    ingestor = UrlIngestor()
+
+    # build graph
+
     with ingestor.scan():
         pass
 
