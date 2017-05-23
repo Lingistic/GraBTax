@@ -1,5 +1,5 @@
 from lib.build_graph import build_graph, load, recursive_partition, save
-from lib.url_ingestor import UrlIngestor
+from lib.models.default.url_ingestor import UrlIngestor
 import csv
 import pickle
 import networkx
@@ -8,7 +8,7 @@ if __name__ == "__main__":
 
     # train model
     ingestor = UrlIngestor()
-
+    ingestor.post("https://www.nytimes.com/2017/05/22/world/europe/ariana-grande-manchester-police.html?_r=0")
     # build graph
 
     with ingestor.scan():

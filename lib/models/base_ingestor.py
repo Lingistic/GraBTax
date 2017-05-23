@@ -14,20 +14,7 @@ class BaseIngestor(ABC):
         pass
 
     @abstractmethod
-    @property
     def connection(self):
-        return  #return connection
-
-
-    @abstractmethod
-    @connection.setter
-    def connection(self, value):
-        pass
-
-    @abstractmethod
-    @connection.deleter
-    def connection(self):
-        # del connection
         pass
 
 BaseIngestor.register(tuple)
