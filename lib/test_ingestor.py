@@ -10,15 +10,23 @@ class TestIngestor(BaseIngestor):
 
         pass
 
-    @contextmanager
     def scan(self):
-        if self.__connection:
+        if self.connection:
             yield
         else:
             self.__connect()
+            self.scan()
 
     def __connect(self):
         pass
+
+    def post(self, url):
+        if self.connection:
+            pass
+        else:
+            self.__connect()
+            self.post(url)
+
 
     def connection(self):
         pass
