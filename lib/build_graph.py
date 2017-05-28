@@ -7,11 +7,8 @@ the corpus, beyond a threshold
 import numpy
 from networkx import Graph, write_graphml, read_graphml
 import logging
-import pickle
-import csv
+import os
 import metis
-import networkx
-from networkx.drawing import draw_spectral
 __author__ = "Rob McDaniel <robmcdan@gmail.com>"
 __copyright__ = """
 Copyright 2017 LiveStories
@@ -217,6 +214,8 @@ def save(name, g):
     :param g: the graph to save
     :return: None
     """
+    if not os.path.exists("graphs//"):
+        os.mkdir("graphs//")
     write_graphml(g, "graphs//" + name + ".graphml")
 
 
@@ -283,7 +282,10 @@ def recursive_partition(g, taxonomy_out, query_topic, k=4):
     :param k: partition size for graph bisection
     :return: taxonomy graph (taxonomy_out)
     """
-    from lib.subgraph import get_subgraph
+    if query_topic not in g.node.keys():
+        return taxonomy_out, query_topic
+
+    from lib.subgraph import get_subgraph # todo: this is here to prevent an annoying circular reference
 
     taxonomy_out.add_node(query_topic, weight=g.node[query_topic]["weight"])
     g_sub = get_subgraph(g, query_topic)

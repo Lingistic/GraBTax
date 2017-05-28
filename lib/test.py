@@ -7,12 +7,12 @@ import networkx
 if __name__ == "__main__":
 
     # train model
-    ingestor = UrlIngestor()
-    ingestor.post("https://www.nytimes.com/2017/05/22/world/europe/ariana-grande-manchester-police.html?_r=0")
+    #ingestor = UrlIngestor()
+    #ingestor.post("https://www.nytimes.com/2017/05/22/world/europe/ariana-grande-manchester-police.html?_r=0")
     # build graph
 
-    with ingestor.scan():
-        pass
+    #with ingestor.scan():
+    #    pass
 
     with open("topic_words.tsv", "r") as infile:
         reader = csv.reader(infile, delimiter="\t")
