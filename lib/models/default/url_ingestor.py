@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class UrlIngestor(BaseIngestor):
-    __resource_location = "lib/models/default/resources/"
+    __resource_location = "models/default/resources/"
     __article_data = namedtuple("article_data", ["url", "title", "text"])
     __article_data.__new__.__defaults__ = (None,) * len(__article_data._fields)
 
@@ -68,12 +68,13 @@ class UrlIngestor(BaseIngestor):
                 self.__write_flat_file(data)
             else:
                 self.__connect()
-                self.post(url)
+                return self.post(url)
         except Exception as ex:
             logging.error("url_ingestor.post: error occurred during post. The index may or may not have been updated: ex = {0}".format(ex))
+            return
 
-        logging.info(("url_ingestor.post: successfully posted: url = {0}, with title len = {1} and text length = {2}",
-                      url, len(data.title), len(data.text)))
+        logging.info(("url_ingestor.post: successfully posted: url = {0}, with title len = {1} and text length = {2}".format(
+                      url, len(data.title), len(data.text))))
 
     @property
     def connection(self):

@@ -1,20 +1,24 @@
 from lib.build_graph import build_graph, load, recursive_partition, save
 from lib.models.default.url_ingestor import UrlIngestor
-import csv
 import pickle
 import networkx
+import csv
 
 if __name__ == "__main__":
 
     # train model
-    #ingestor = UrlIngestor()
-    #ingestor.post("https://www.nytimes.com/2017/05/22/world/europe/ariana-grande-manchester-police.html?_r=0")
+    ingestor = UrlIngestor()
+    with open("models/default/url_list.tsv", "r") as infile:
+        reader = csv.reader(infile, delimiter="\t")
+        for row in reader:
+            ingestor.post(row[0])
+
     # build graph
 
     #with ingestor.scan():
     #    pass
 
-    with open("topic_words.tsv", "r") as infile:
+    with open("topic_words.tsv", "rb") as infile:
         reader = csv.reader(infile, delimiter="\t")
         topic_words = {int(rows[0]): rows[1] for rows in reader}
     if True:
