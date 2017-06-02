@@ -62,9 +62,9 @@ def load_docs():
 def train_lda(corpus, dictionary):
     corpus = gensim.corpora.MmCorpus('/home/rob/git/GraBTax/lib/models/default/resources/corpus.mm')
     dictionary = gensim.corpora.Dictionary.load('/home/rob/git/GraBTax/lib/models/default/resources/dictionary')
-    lda = LdaModel(corpus = corpus, id2word = dictionary, num_topics = 50, update_every = 1, chunksize = 10000, passes = 1)
+    lda = LdaModel(corpus = corpus, id2word = dictionary, num_topics = 50, update_every = 1, chunksize = 10000, passes = 10)
     cm = CoherenceModel(model=lda, corpus=corpus, coherence='u_mass')
-    cm.get_coherence()
+    print(cm.get_coherence())
     import pyLDAvis.gensim
     topicmodel = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
     html = pyLDAvis.display(topicmodel)
@@ -76,8 +76,7 @@ def train_lda(corpus, dictionary):
     f.write(message)
     f.close()
     webbrowser.open_new_tab('viz.html')
-    print("d")
-
+    lda.save("lda.mdl")
 
 def process_document(document):
     tokens = []
