@@ -2,16 +2,18 @@ import gensim
 from gensim.models import LdaModel, CoherenceModel
 from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
-import os
 import csv
 from gensim.corpora import Dictionary, MmCorpus
 import logging
-
+from lib.models.default.configmap import Config
+import os
+config = Config()
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 def generate_matrix_market(dictionary, save=False,
-                           file='/home/rob/git/GraBTax/lib/models/default/resources/corpus.mm'):
+                           file=os.path.join(config.map("Storage")['storage_dir'] + 'corpus.mm')):
     corpus = iter_docs(dictionary)
 
     if save:
@@ -21,7 +23,7 @@ def generate_matrix_market(dictionary, save=False,
 
 
 def build_dictionary(trim=False, save=False,
-                     file='/home/rob/git/GraBTax/lib/models/default/resources/dictionary'):
+                     file=os.path.join(config.map("Storage")['storage_dir'] + 'dictionary')):
 
     def load():
         docs = load_docs()
@@ -59,10 +61,11 @@ def load_docs():
                 yield parsed_doc.readlines()
 
 
-def train_lda(corpus, dictionary):
-    corpus = gensim.corpora.MmCorpus('/home/rob/git/GraBTax/lib/models/default/resources/corpus.mm')
-    dictionary = gensim.corpora.Dictionary.load('/home/rob/git/GraBTax/lib/models/default/resources/dictionary')
+def train_lda(corpus, dictionary, save=False, file=os.path.join(config.map("Storage")['storage_dir'] + 'lda.mdl')):
     lda = LdaModel(corpus = corpus, id2word = dictionary, num_topics = 50, update_every = 1, chunksize = 10000, passes = 10)
+    if save:
+        lda.save(file)
+
     cm = CoherenceModel(model=lda, corpus=corpus, coherence='u_mass')
     print(cm.get_coherence())
     import pyLDAvis.gensim
@@ -76,7 +79,7 @@ def train_lda(corpus, dictionary):
     f.write(message)
     f.close()
     webbrowser.open_new_tab('viz.html')
-    lda.save("lda.mdl")
+
 
 def process_document(document):
     tokens = []
@@ -96,5 +99,7 @@ def tokenize(text):
 
 if __name__ == "__main__":
 
-    #corpus, dictionary = build_corpus()
-    train_lda(None, None)
+    #corp, corp_dict = build_corpus()
+    corp = gensim.corpora.MmCorpus('/home/rob/git/GraBTax/lib/models/default/resources/corpus.mm')
+    corp_dict = gensim.corpora.Dictionary.load('/home/rob/git/GraBTax/lib/models/default/resources/dictionary')
+    train_lda(corp, corp_dict)
