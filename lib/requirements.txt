@@ -1,0 +1,8 @@
+matplotlib==2.0.2
+numpy==1.12.1
+gensim==2.1.0
+lib==2.0.0
+metis==0.2a2
+networkx==1.11
+newspaper==0.0.9.8
+pyLDAvis==2.1.1
