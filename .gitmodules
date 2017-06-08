@@ -1,0 +1,3 @@
+[submodule "metis-python"]
+	path = metis-python
+	url = git@github.com:kw/metis-python.git

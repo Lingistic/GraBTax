@@ -1,9 +1,0 @@
-nfo
-.DS_Store
-*.class
-dist/
-build/
-MANIFEST
-docs/_build
-\#*#
-.#*
