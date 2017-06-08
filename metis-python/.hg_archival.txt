@@ -1,6 +1,0 @@
-repo: 7567cdd5668ae16014f030d43236f055696b6877
-node: e3a2f662c96220875a7e957f60868850588496f9
-branch: default
-latesttag: metis-0.2a1
-latesttagdistance: 8
-changessincelatesttag: 8
