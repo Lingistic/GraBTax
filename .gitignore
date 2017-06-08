@@ -1,3 +1,6 @@
+lib/models/*/resources
+.idea
 lib/models/default/resources
 metis-5.1.0/cmake-build-debug
 metis-5.1.0/cmake-build
+metis-5.1.0/build/
