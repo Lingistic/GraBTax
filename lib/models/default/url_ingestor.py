@@ -6,13 +6,16 @@ import csv
 from lib.file_lock import FileLock
 import os
 import logging
+from lib.models.default.configmap import Config
+
+config = Config()
 
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-class UrlIngestor(BaseIngestor):
-    __resource_location = "models/default/resources/"
+class RCPIngestor(BaseIngestor):
+    __resource_location = config.map("Storage")['storage_dir']
     __article_data = namedtuple("article_data", ["url", "title", "text"])
     __article_data.__new__.__defaults__ = (None,) * len(__article_data._fields)
 

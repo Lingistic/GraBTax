@@ -1,23 +1,22 @@
-import configparser
+from configparser import ConfigParser
 import logging
 import os
 
 logging.basicConfig(level=logging.DEBUG)
 
-
 class Config:
     def __init__(self):
-        self.config = configparser.ConfigParser()
+        self.config = ConfigParser()
         ini_path = os.path.dirname(os.path.realpath(__file__))
         self.config.read(os.path.join(ini_path, "default.ini"))
 
     # simple pattern from https://wiki.python.org/moin/ConfigParserExamples
     def map(self, section):
         dict1 = {}
-        options = Config.options(section)
+        options = self.config.options(section)
         for option in options:
             try:
-                dict1[option] = Config.get(section, option)
+                dict1[option] = self.config.get(section, option)
                 if dict1[option] == -1:
                     logging.debug("skip: %s" % option)
             except:

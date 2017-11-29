@@ -1,28 +1,36 @@
 from lib.build_graph import build_graph, load, recursive_partition, save
-from lib.models.default.url_ingestor import UrlIngestor
+import lib.models.default.lda as lda
+from lib.models.default.url_ingestor import RCPIngestor
 import pickle
 import networkx
 import csv
+from lib.models.default.configmap import Config
+import os
+
+config = Config()
 
 if __name__ == "__main__":
 
     # train model
-    ingestor = UrlIngestor()
-    with open("models/default/url_list.tsv", "r") as infile:
+    ingestor = RCPIngestor()
+    with open(os.path.join(config.map("Storage")['storage_dir'], "url_list.tsv"), "r") as infile:
         reader = csv.reader(infile, delimiter="\t")
         for row in reader:
             ingestor.post(row[0])
 
-    # build graph
+    corp, corp_dict = lda.build_corpus()
+    ldamodel = lda.train_lda(corp, corp_dict, True)
 
-    #with ingestor.scan():
-    #    pass
+    lda.write_topic_words(ldamodel)
 
-    with open("topic_words.tsv", "rb") as infile:
+    with open(os.path.join(config.map("Storage")['storage_dir'], "topic_words.tsv"), "r") as infile:
         reader = csv.reader(infile, delimiter="\t")
-        topic_words = {int(rows[0]): rows[1] for rows in reader}
+        topic_words = {int(row[0]): row[1] for row in enumerate(reader)}
+
+    lda.write_theta_matrix(ldamodel)
+
     if True:
-        with open("study_theta_matrix.pkl", "rb") as f:
+        with open(os.path.join(config.map("Storage")['storage_dir'], "theta.pkl"), "rb") as f:
             foo = pickle.load(f)
         g = build_graph(foo, topic_words, "indicator_topics")
     else:
