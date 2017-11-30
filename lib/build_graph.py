@@ -5,7 +5,7 @@ the corpus, beyond a threshold
 """
 
 import numpy
-from networkx import Graph, write_graphml, read_graphml
+from networkx import Graph, write_graphml, read_graphml, get_edge_attributes
 import logging
 import os
 import metis
@@ -74,7 +74,7 @@ def add_jaccard_weighted_edges(g, bool_topic_matrix):
                 jaccard_matrix[i, j] = jaccard
                 jaccard_matrix[j, i] = jaccard
                 try:
-                    if "count" in g.edge[i][j].keys():
+                    if "count" in g.edges[i, j].keys():
                         g.add_edge(i, j, similarity=int(jaccard*100))
                 except KeyError:
                     pass
@@ -120,7 +120,7 @@ def add_vertices(cooccurrence_matrix, g, topic_labels):
         logging.debug(i)
         topic_i = cooccurrence_matrix[:, i]
         sum_i = numpy.nansum(topic_i)
-        g.add_node(i, weight=int(sum_i), label=topic_labels[i])
+        g.add_node(i, weight=int(sum_i), label=", ".join(topic_labels[i]))
         colocations = numpy.where(topic_i > 0)[0]
         for j in colocations:
             g.add_edge(i, j, count=int(numpy.nansum(cooccurrence_matrix[i,j])))
@@ -140,17 +140,18 @@ def update_edge_weights(g):
     for i in range(num_topics):
         logging.debug(i)
         topic_i = g.node[i]["weight"]
-        colocations = [key for key in g.edge[i].keys()]
+        colocations = [edge[1] for edge in g.edges(i)]
         lambda1 = 1
         lambda2 = 1
         for j in colocations:
-            rank_ij = get_rank(i, j, g)
-            rank_ji = get_rank(j, i, g)
-            rank = 1 if rank_ij == 1 or rank_ji == 1 else 0
-            count = g.edge[i][j]["count"]
-            jac = g.edge[i][j]["similarity"]
-            weight_ij = (1 + (lambda1 * rank) + (lambda2 * jac)) * count
-            g.add_edge(i, j, weight=int(weight_ij))
+            if j != i:
+                rank_ij = get_rank(i, j, g)
+                rank_ji = get_rank(j, i, g)
+                rank = 1 if rank_ij == 1 or rank_ji == 1 else 0
+                count = g.edges[i, j]["count"]
+                jac = g.edges[i, j]["similarity"]
+                weight_ij = (1 + (lambda1 * rank) + (lambda2 * jac)) * count
+                g.add_edge(i, j, weight=int(weight_ij))
     return g
 
 
@@ -166,18 +167,22 @@ def get_rank(i, j, g):
     :return: returns the rank score
     """
     rank_count = 0
-    # first get topics with greater strength than topic j
+    # first get topics with greater strength than topic j,
+    # so get topic J strength.
     topic_j_s = g.node[j]["weight"]
 
+    # now find the topics which are candidates
+    # (they are neighbors of j)
+    # todo: we are iterating all topics, but we just need the ones connected to j
     candidate_h = []
     num_topics = len(g)
     for h in range(num_topics):
-        topic_h = g.nodes()[h]
-        if j != topic_h and i != topic_h:
-            topic_h_s = g.node[topic_h]["weight"]
+        #topic_h = g.nodes()[h]
+        if j != h and i != h:
+            topic_h_s = g.nodes[h]["weight"]
 
             if topic_h_s > topic_j_s:
-                candidate_h.append(topic_h)
+                candidate_h.append(h)
 
     for h in candidate_h:
         h_given_j = get_conditional_topic_prob(h, j, g)
@@ -201,7 +206,7 @@ def get_conditional_topic_prob(i, j, g):
         return 1.0
     topic_j_s = g.node[j]["weight"]
     try:
-        count_i_given_j = g.edge[i][j]["count"]
+        count_i_given_j = g.edges[i, j]["count"]
     except KeyError: # might not be an edge connecting these vertices
         return 0.0
     if topic_j_s == 0:
@@ -246,7 +251,7 @@ def build_graph(theta_matrix, labels, friendly_name=None):
     g = add_vertices(cooccurrences, g, labels)
     g = add_jaccard_weighted_edges(g, b_matrix)
     g = update_edge_weights(g)
-    g = blacklisted_topics(g)
+#    g = blacklisted_topics(g)
 
     # add these for METIS
     g.graph["edge_weight_attr"] = "weight"
@@ -285,7 +290,7 @@ def recursive_partition(g, taxonomy_out, query_topic, k=4):
     :param k: partition size for graph bisection
     :return: taxonomy graph (taxonomy_out)
     """
-    if query_topic not in g.node.keys():
+    if query_topic not in g.nodes():
         return taxonomy_out, query_topic
 
     from lib.subgraph import get_subgraph # todo: this is here to prevent an annoying circular reference
@@ -293,20 +298,22 @@ def recursive_partition(g, taxonomy_out, query_topic, k=4):
     taxonomy_out.add_node(query_topic, weight=g.node[query_topic]["weight"])
     g_sub = get_subgraph(g, query_topic)
     if len(g_sub) > 1:
+        #Graph().add_nodes_from() g_sub.add_node(query_topic, weight=g.node[query_topic]["weight"])
+        return g_sub, query_topic
         x = metis.networkx_to_metis(g_sub)
         (edgecuts, parts) = metis.part_graph(x, k)
 
         for part in range(k):
             max_degree = 0
             max_node = None
-            for node in [g_sub.nodes()[i] for i, j in enumerate(parts) if j == part]:
+            for node in [[node for node in g_sub.nodes()][i] for i, j in enumerate(parts) if j == part]:
                 degree = g_sub.degree(node)
                 if degree > max_degree:
                     max_node = node
                     max_degree = degree
             if max_node is not None:
                 recursive_partition(
-                    g_sub.subgraph([g_sub.nodes()[i] for i, j in enumerate(parts) if j == part]),
+                    g_sub.subgraph([[node for node in g_sub.nodes()][i] for i, j in enumerate(parts) if j == part]),
                     taxonomy_out, max_node)
                 taxonomy_out.add_node(max_node, weight=g_sub.node[max_node]["weight"])
                 taxonomy_out.add_edge(query_topic, max_node)

@@ -12,20 +12,19 @@ def get_subgraph(g, topic_0):
 
     # lowering these increases specificity of topics that are included in the graph.
     # raising them results in broader topics being added to the taxonomy
-    k_min = g.degree(topic_0) / 2
+    k_min = g.degree(topic_0) / 4
     s_min = g.node[topic_0]["weight"] / 2 #300
 
     num_topics = len(g)
     sub_graph = []
     for i in range(num_topics):
-        if topic_0 != g.nodes()[i]:
+        if topic_0 != i:
             try:
-                topic_i = g.nodes()[i]
-                rank = get_rank(topic_0, topic_i, g)
-                topic_i_s = g.node[topic_i]["weight"]
-                if rank <= r_max and g.degree(topic_i) >= k_min and topic_i_s >= s_min:
-                    sub_graph.append(topic_i)
+                rank = get_rank(topic_0, i, g)
+                topic_i_s = g.node[i]["weight"]
+                if rank <= r_max and g.degree(i) >= k_min and topic_i_s >= s_min:
+                    sub_graph.append(i)
             except KeyError:
                 pass
-    return g.subgraph(i for i in sub_graph)
+    return g.subgraph(i for i in sub_graph).copy()
 
